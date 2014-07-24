@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-from sparta import ThingFactory
-from rdflib.Graph import Graph
+from laconia import ThingFactory
+from rdflib import Graph
 
 store = Graph()
 store.bind("contact", "http://www.example.com/contact#")

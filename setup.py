@@ -2,21 +2,21 @@
 
 from distutils.core import setup
 
-setup(name='sparta',
-		version = '0.9-pre',
-		py_modules = ['sparta'],
-		author = 'Mark Nottingham',
-		author_email = 'mnot@mnot.net',
-		url = 'http://gitub.com/mnot/sparta',
+setup(name='laconia',
+		version = '0.0.0',
+		py_modules = ['laconia'],
+		author = 'Ross Fenning',
+		author_email = 'ross.fenning@gmail.com',
+		url = 'http://gitub.com/avengerpenguin/laconia',
 		description = 'Simple API for RDF',
-		long_description = """Sparta is an Python API for RDF that is designed 
+		long_description = """Laconia is a Python API for RDF that is designed
 to help easily learn and navigate the Semantic Web programmatically. 
-Unlike other RDF interfaces, which are generally triple-based, Sparta 
+Unlike other RDF interfaces, which are generally triple-based, Laconia
 binds RDF nodes to Python objects and RDF arcs to attributes of those 
 Python objects.""",
-		license = 'MIT',
+		license = 'GPLv3+',
 		classifiers = [
-		  'License :: OSI Approved :: MIT License',
+		  'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
 		  'Operating System :: OS Independent',
 		  'Programming Language :: Python',
 		  'Topic :: Software Development :: Libraries :: Python Modules',

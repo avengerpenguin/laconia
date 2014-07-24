@@ -1,8 +1,8 @@
 ======
-Sparta
+Laconia
 ======
 
-A Simple API for RDF by Mark Nottingham, <mnot@pobox.com>
+Forked from Sparta: a Simple API for RDF by Mark Nottingham, <mnot@pobox.com> Original documentation for Sparta follows.
 
 Sparts is a simple, resource-centric API for RDF graphs, built on top of
 rdflib_. 

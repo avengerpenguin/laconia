@@ -1,9 +1,10 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 """
-sparta.py - a Simple API for RDF
+laconia.py - a Simple API for RDF
 
-Sparta is a simple API for RDF that binds RDF nodes to Python 
+Laconia (née Sparta) is a simple API for RDF that binds RDF nodes to Python
 objects and RDF arcs to attributes of those Python objects. As 
 such, it can be considered a "data binding" from RDF to Python.
 
@@ -11,6 +12,12 @@ Requires rdflib <http://www.rdflib.net/> version 2.3.1+.
 """
 
 __license__ = """
+Portions post-fork Copyright (c) 2014 Ross Fenning <ross.fenning@gmail.com>
+
+Forked changes licensed under GPL v3+ (see LICENCE).
+
+Original licence for Sparta pre-fork:
+
 Copyright (c) 2001-2006 Mark Nottingham <mnot@pobox.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -32,14 +39,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-__version__ = "0.9-pre"
+__version__ = "0.0.0"
 
 import base64
 import rdflib   # http://rdflib.net/
-from rdflib.Identifier import Identifier as ID
-from rdflib.URIRef import URIRef as URI
-from rdflib.BNode import BNode
-from rdflib.Literal import Literal
+from rdflib.term import Identifier as ID
+from rdflib import URIRef as URI
+from rdflib import BNode
+from rdflib import Literal
 from rdflib import RDF, RDFS
 
 RDF_SEQi = "http://www.w3.org/1999/02/22-rdf-syntax-ns#_%s"
@@ -528,7 +535,7 @@ SchemaToPython = {  #  (schema->python, python->schema)  Does not validate.
 
 
 if __name__ == '__main__':
-    # use: "python -i sparta.py [URI for RDF file]+"
+    # use: "python -i laconia.py [URI for RDF file]+"
     from rdflib.TripleStore import TripleStore
     import sys
     mystore = TripleStore()
