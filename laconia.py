@@ -241,7 +241,7 @@ class Thing(object):
         else:
             raise ValueError
 
-    def _pythonToRdf(self, pred, obj):
+    def _pythonToRdf(self, pred, obj, lang=None):
         """
         Given a Python predicate and object, return the equivalent RDF object.
         
@@ -268,7 +268,7 @@ class Thing(object):
                 obj.copyTo(self._store)  ### and this...
             return obj._id
         else:
-            return self._pythonToLiteral(obj, obj_types)
+            return self._pythonToLiteral(obj, obj_types, lang=lang)
 
     def _literalToPython(self, obj, obj_types):
         """
@@ -284,7 +284,7 @@ class Thing(object):
                 pass
         return SchemaToPythonDefault[0](obj)
     
-    def _pythonToLiteral(self, obj, obj_types):
+    def _pythonToLiteral(self, obj, obj_types, lang=None):
         """
         obj - a python literal datatype
         obj_types - iterator yielding rdflib.URIRef.URIRef instances
@@ -293,10 +293,10 @@ class Thing(object):
         """
         for obj_type in obj_types:
             try:
-                return Literal(SchemaToPython[str(obj_type)][1](obj))
+                return Literal(SchemaToPython[str(obj_type)][1](obj), lang=lang)
             except KeyError:
                 pass
-        return Literal(SchemaToPythonDefault[1](obj))
+        return Literal(SchemaToPythonDefault[1](obj), lang=lang)
             
     def _listToPython(self, subj):
         """
@@ -475,7 +475,7 @@ class ResourceSet:
     def __iter__(self):
         for (s, p, o) in \
           self._store.triples((self._subject._id, self._predicate, None)):
-            yield self._subject._pythonToRdf(self._predicate, o)
+            yield self._subject._pythonToRdf(self._predicate, o, lang=o.language)
     def copy(self):
         return set(self)
     def add(self, obj):
