@@ -42,7 +42,6 @@ SOFTWARE.
 __version__ = "0.0.0"
 
 import base64
-import rdflib   # http://rdflib.net/
 from rdflib.term import Identifier as ID
 from rdflib import URIRef as URI
 from rdflib import BNode
@@ -59,7 +58,7 @@ ONE = Literal("1")
 
 
 
-class ThingFactory:
+class ThingFactory(object):
     """
     Fed a store, return a factory that can be used to instantiate
     Things into that world.
@@ -98,9 +97,9 @@ class ThingFactory:
         """
         self.alias_map[alias] = uri
     
-class Thing:
+class Thing(object):
     """ An RDF resource, as uniquely identified by a URI. Properties
-        of the resource are avaiable as attributes; for example: 
+        of the resource are available as attributes; for example:
         .prefix_localname is the property in the namespace mapped 
         to the "prefix" prefix, with the localname "localname".
         
@@ -135,8 +134,9 @@ class Thing:
             self._id = self._AttrToURI(ident)
         if props is not None:
             for attr, obj in props.items():
-                if type(obj) is type([]):
-                    [self.__getattr__(attr).add(o) for o in obj]
+                if isinstance(obj, list):
+                    for o in obj:
+                        self.__getattr__(attr).add(o)
                 else:
                     self.__setattr__(attr, obj)
         
@@ -340,7 +340,7 @@ class Thing:
         
         returns rdflib.URIRef.URIRef instance
         """
-        if self._alias_map.has_key(attr):
+        if attr in self._alias_map:
             return URI(self._alias_map[attr])
         else:
             prefix, localname = attr.split("_", 1)
@@ -371,8 +371,8 @@ class Thing:
         
         returns list containing rdflib.Identifier.Identifier instances
         """
-        obj_types = [o for (s, p, o) in self._schema_store.triples(
-          (pred, RDFS.range, None))]
+        obj_types = [o for (s, p, o) in self._schema_store.triples((pred, RDFS.range, None))]
+
         if isinstance(obj, URI):
             obj_types += [o for (s, p, o) in self._store.triples((obj, RDF.type, None))]
         return obj_types
@@ -390,7 +390,7 @@ class Thing:
             return True
         # subj rdf:type [ rdfs:subClassOf [ a owl:Restriction; owl:onProperty pred; owl:maxCardinality "1" ]] - True
         # subj rdf:type [ rdfs:subClassOf [ a owl:Restriction; owl:onProperty pred; owl:cardinality "1" ]] - True
-        subj_types = [o for (s, p, o) in self._store.triples((self._id, RDF.type, None))]
+        subj_types = [o for (_, _, o) in self._store.triples((self._id, RDF.type, None))]
         for type in subj_types:
             superclasses = [o for (s, p, o) in \
               self._schema_store.triples((type, RDFS.subClassOf, None))]
