@@ -3,7 +3,7 @@
 from distutils.core import setup
 
 setup(name='laconia',
-		version = '0.0.0',
+		version = '0.1.0',
 		py_modules = ['laconia'],
 		author = 'Ross Fenning',
 		author_email = 'ross.fenning@gmail.com',

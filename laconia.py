@@ -223,7 +223,7 @@ class Thing(object):
         """ 
         obj_types = self._getObjectTypes(pred, obj)
         if isinstance(obj, Literal):  # typed literals
-            return self._literalToPython(obj, obj_types)
+            return obj.toPython()
         elif RDF.List in obj_types:
             return self._listToPython(obj)
         elif RDF.Seq in obj_types:
@@ -270,20 +270,6 @@ class Thing(object):
         else:
             return self._pythonToLiteral(obj, obj_types, lang=lang)
 
-    def _literalToPython(self, obj, obj_types):
-        """
-        obj - rdflib.Literal.Literal instance
-        obj_types - iterator yielding rdflib.URIRef.URIRef instances
-        
-        returns a python literal datatype
-        """
-        for obj_type in obj_types:
-            try:
-                return SchemaToPython[str(obj_type)][0](obj)
-            except KeyError:
-                pass
-        return SchemaToPythonDefault[0](obj)
-    
     def _pythonToLiteral(self, obj, obj_types, lang=None):
         """
         obj - a python literal datatype
@@ -292,12 +278,9 @@ class Thing(object):
         returns rdflib.Literal.Literal instance
         """
         for obj_type in obj_types:
-            try:
-                return Literal(SchemaToPython[str(obj_type)][1](obj), lang=lang)
-            except KeyError:
-                pass
-        return Literal(SchemaToPythonDefault[1](obj), lang=lang)
-            
+            return Literal(obj, datatype=obj_type, lang=lang)
+        return Literal(obj, lang=lang)
+
     def _listToPython(self, subj):
         """
         Given a RDF list, return the equivalent Python list.
@@ -496,44 +479,6 @@ class ResourceSet:
         self._store.remove((self._subject, self._predicate, None))
 
         
-SchemaToPythonDefault = (unicode, unicode)
-SchemaToPython = {  #  (schema->python, python->schema)  Does not validate.
-    'http://www.w3.org/2001/XMLSchema#string': (unicode, unicode),
-    'http://www.w3.org/2001/XMLSchema#normalizedString': (unicode, unicode),
-    'http://www.w3.org/2001/XMLSchema#token': (unicode, unicode),
-    'http://www.w3.org/2001/XMLSchema#language': (unicode, unicode),
-    'http://www.w3.org/2001/XMLSchema#boolean': (bool, lambda i:unicode(i).lower()),
-    'http://www.w3.org/2001/XMLSchema#decimal': (float, unicode), 
-    'http://www.w3.org/2001/XMLSchema#integer': (long, unicode), 
-    'http://www.w3.org/2001/XMLSchema#nonPositiveInteger': (int, unicode),
-    'http://www.w3.org/2001/XMLSchema#long': (long, unicode),
-    'http://www.w3.org/2001/XMLSchema#nonNegativeInteger': (int, unicode),
-    'http://www.w3.org/2001/XMLSchema#negativeInteger': (int, unicode),
-    'http://www.w3.org/2001/XMLSchema#int': (int, unicode),
-    'http://www.w3.org/2001/XMLSchema#unsignedLong': (long, unicode),
-    'http://www.w3.org/2001/XMLSchema#positiveInteger': (int, unicode),
-    'http://www.w3.org/2001/XMLSchema#short': (int, unicode),
-    'http://www.w3.org/2001/XMLSchema#unsignedInt': (long, unicode),
-    'http://www.w3.org/2001/XMLSchema#byte': (int, unicode),
-    'http://www.w3.org/2001/XMLSchema#unsignedShort': (int, unicode),
-    'http://www.w3.org/2001/XMLSchema#unsignedByte': (int, unicode),
-    'http://www.w3.org/2001/XMLSchema#float': (float, unicode),
-    'http://www.w3.org/2001/XMLSchema#double': (float, unicode),  # doesn't do the whole range
-#    duration
-#    dateTime
-#    time
-#    date
-#    gYearMonth
-#    gYear
-#    gMonthDay
-#    gDay
-#    gMonth
-#    hexBinary
-    'http://www.w3.org/2001/XMLSchema#base64Binary': (base64.decodestring, lambda i:base64.encodestring(i)[:-1]),
-    'http://www.w3.org/2001/XMLSchema#anyURI': (str, str),
-}
-
-
 if __name__ == '__main__':
     # use: "python -i laconia.py [URI for RDF file]+"
     from rdflib.TripleStore import TripleStore
