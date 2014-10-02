@@ -39,9 +39,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-__version__ = "0.0.0"
+__version__ = "0.1.0"
 
-import base64
 from rdflib.term import Identifier as ID
 from rdflib import URIRef as URI
 from rdflib import BNode
@@ -112,7 +111,7 @@ class Thing(object):
             c) a list containing a and/or b
     """
     
-    def __init__(self, store, schema_store, alias_map, ident, props=None):
+    def __init__(self, store, schema_store, alias_map, ident=None, props=None):
         """
         store - rdflib.Graph.Graph
         schema_store - rdflib.Graph.Graph
@@ -126,12 +125,9 @@ class Thing(object):
         self._store = store
         self._schema_store = schema_store
         self._alias_map = alias_map
-        if ident is None:
-            self._id = BNode()
-        elif isinstance(ident, ID):
-            self._id = ident
-        else:
-            self._id = self._AttrToURI(ident)
+
+        self._id = self._AttrToURI(ident)
+
         if props is not None:
             for attr, obj in props.items():
                 if isinstance(obj, list):
@@ -152,19 +148,14 @@ class Thing(object):
         if attr[0] == '_':
             raise AttributeError
         else:
-            if ":" in attr:
-                pred = URI(attr)
-            else:
-                try:
-                    pred = self._AttrToURI(attr)
-                except ValueError:
-                    raise AttributeError
+            pred = self._AttrToURI(attr)
+
             if self._isUniqueObject(pred):
                 try:
-                    obj = self._store.triples((self._id, pred, None)).next()[2]
+                    obj = self._store.objects(self._id, pred).next()
                 except StopIteration:
                     raise AttributeError
-                return self._rdfToPython(pred, obj)
+                return self._rdf_to_python(pred, obj)
             else:
                 return ResourceSet(self, pred)
                 
@@ -179,13 +170,8 @@ class Thing(object):
         if attr[0] == '_':
             self.__dict__[attr] = obj
         else:
-            if ":" in attr:
-                pred = URI(attr)
-            else:
-                try:                    
-                    pred = self._AttrToURI(attr)
-                except ValueError:
-                    raise AttributeError
+            pred = self._AttrToURI(attr)
+
             if self._isUniqueObject(pred):
                 self._store.remove((self._id, pred, None))
                 self._store.add((self._id, pred, self._pythonToRdf(pred, obj)))
@@ -204,15 +190,9 @@ class Thing(object):
         if attr[0] == '_':
             del self.__dict__[attr]
         else:
-            if ":" in attr:
-                self._store.remove((self._id, URI(attr), None))
-            else:
-                try:
-                    self._store.remove((self._id, self._AttrToURI(attr), None))
-                except ValueError:
-                    raise AttributeError
+            self._store.remove((self._id, self._AttrToURI(attr), None))
 
-    def _rdfToPython(self, pred, obj):
+    def _rdf_to_python(self, pred, obj):
         """
         Given a RDF predicate and object, return the equivalent Python object.
         
@@ -234,7 +214,7 @@ class Thing(object):
                     item = self._store.triples((obj, counter, None)).next()[2]
                 except StopIteration:
                     return l
-                l.append(self._rdfToPython(counter, item)) 
+                l.append(self._rdf_to_python(counter, item))
                 i += 1
         elif isinstance(obj, ID):
             return self.__class__(self._store, self._schema_store, self._alias_map, obj)
@@ -273,7 +253,7 @@ class Thing(object):
     def _pythonToLiteral(self, obj, obj_types, lang=None):
         """
         obj - a python literal datatype
-        obj_types - iterator yielding rdflib.URIRef.URIRef instances
+        obj_types - iterator yielding rdflib.URIRef instances
         
         returns rdflib.Literal.Literal instance
         """
@@ -285,7 +265,7 @@ class Thing(object):
         """
         Given a RDF list, return the equivalent Python list.
         
-        subj - rdflib.Identifier.Identifier instance
+        subj - rdflib.Identifier instance
 
         returns list of python data representations
         """
@@ -297,7 +277,7 @@ class Thing(object):
             rest = self._store.triples((subj, RDF.rest, None)).next()[2]
         except StopIteration:
             return ValueError
-        return [self._rdfToPython(RDF.first, first)] + self._listToPython(rest)  ### type first?
+        return [self._rdf_to_python(RDF.first, first)] + self._listToPython(rest)  ### type first?
 
     def _pythonToList(self, subj, members):
         """
@@ -323,6 +303,15 @@ class Thing(object):
         
         returns rdflib.URIRef.URIRef instance
         """
+        if isinstance(attr, ID):
+            return attr
+
+        if attr is None:
+            return BNode()
+
+        if ':' in attr:
+            return URI(attr)
+
         if attr in self._alias_map:
             return URI(self._alias_map[attr])
         else:
@@ -376,7 +365,7 @@ class Thing(object):
         subj_types = [o for (_, _, o) in self._store.triples((self._id, RDF.type, None))]
         for type in subj_types:
             superclasses = [o for (s, p, o) in \
-              self._schema_store.triples((type, RDFS.subClassOf, None))]
+              self._schema_store.objects(type, RDFS.subClassOf)]
             for superclass in superclasses:
                 if (
                     (superclass, RDF.type, RESTRICTION) in self._schema_store and
@@ -477,13 +466,3 @@ class ResourceSet:
         self._store.remove((self._subject._id, self._predicate, obj))
     def clear(self):
         self._store.remove((self._subject, self._predicate, None))
-
-        
-if __name__ == '__main__':
-    # use: "python -i laconia.py [URI for RDF file]+"
-    from rdflib.TripleStore import TripleStore
-    import sys
-    mystore = TripleStore()
-    for arg in sys.argv[1:]:
-        mystore.parse(arg)
-    thing = ThingFactory(mystore)
