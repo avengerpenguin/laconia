@@ -88,7 +88,7 @@ def test_attribute_error_when_asking_for_unique_property_without_value(factory):
     ross = factory("rf_me")
     factory.store.parse('foaf.rdf')
     with pytest.raises(AttributeError):
-        print ross.foaf_birthday
+        ross.foaf_birthday
 
 
 def test_setting_property_with_set(factory):

@@ -422,7 +422,6 @@ class Thing(object):
         
         store - rdflib.Store.Store
         """
-        print self._id, list(self._store.triples((None, None, None)))
         for (s, p, o) in self._store.triples((self._id, None, None)):
             logging.debug('Copying %s, %s, %s', s, p, o)
             store.add((s, p, o))
