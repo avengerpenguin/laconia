@@ -41,11 +41,11 @@ SOFTWARE.
 
 __version__ = "0.1.0"
 
-from rdflib.term import Identifier as ID
+from rdflib.term import Identifier as ID, Node
 from rdflib import URIRef as URI
-from rdflib import BNode
-from rdflib import Literal
-from rdflib import RDF, RDFS
+from rdflib import BNode, Literal, RDF, RDFS
+import logging
+
 
 RDF_SEQi = "http://www.w3.org/1999/02/22-rdf-syntax-ns#_%s"
 MAX_CARD = URI("http://www.w3.org/2002/07/owl#maxCardinality")
@@ -54,7 +54,6 @@ RESTRICTION = URI("http://www.w3.org/2002/07/owl#Restriction")
 FUNC_PROP = URI("http://www.w3.org/2002/07/owl#FunctionalProperty")
 ON_PROP = URI("http://www.w3.org/2002/07/owl#onProperty")
 ONE = Literal("1")
-
 
 
 class ThingFactory(object):
@@ -67,11 +66,13 @@ class ThingFactory(object):
         store - rdflib.Graph.Graph instance
         schema_store - rdflib.Graph.Graph instance; defaults to store
         """
+        logging.debug('__init__:\t\tCreating Laconic factory with store %s and schema store %s and alias map %s',
+                      store, schema_store, alias_map)
         self.store = store
         self.schema_store = schema_store or self.store
         self.alias_map = alias_map or {}
 
-    def __call__(self, ident, **props):
+    def __call__(self, ident=None, **props):
         """
         ident - either:
             a) None  (creates a new BNode)
@@ -82,6 +83,7 @@ class ThingFactory(object):
 
         returns Thing instance
         """
+        logging.debug('__call__:\t\tFactory invoked to create "%s" with props %s', ident, props)
         return Thing(self.store, self.schema_store, self.alias_map, ident, props)
 
     def addAlias(self, alias, uri):
@@ -94,6 +96,7 @@ class ThingFactory(object):
           .addAlias("foobar", "http://example.com/my-unmappable-types#blah-type")
         will map the .foobar property to the provided URI.
         """
+        logging.debug('addAlias:\t\tAdding alias %s for URI %s', alias, uri)
         self.alias_map[alias] = uri
     
 class Thing(object):
@@ -122,6 +125,7 @@ class Thing(object):
         props - dict of properties and values, to be added. If the value is a list, its
                 contents will be added to a ResourceSet.
         """
+        logging.debug('__init__:\t\tCreating entity with ident %s' % ident)
         self._store = store
         self._schema_store = schema_store
         self._alias_map = alias_map
@@ -129,6 +133,7 @@ class Thing(object):
         self._id = self._AttrToURI(ident)
 
         if props is not None:
+            logging.debug('__init__:\t\tAdditional props given during entity creation: %s' % props)
             for attr, obj in props.items():
                 if isinstance(obj, list):
                     for o in obj:
@@ -145,18 +150,21 @@ class Thing(object):
 
         returns a python data representation or a ResourceSet instance
         """
+        logging.debug('__getattr__:\t\tGetting attribute %s for entity %s', attr, self)
         if attr[0] == '_':
             raise AttributeError
         else:
             pred = self._AttrToURI(attr)
 
             if self._isUniqueObject(pred):
+                logging.debug('__getattr__:\t\tPredicate %s is unique. Trying to return single Python value.', pred)
                 try:
                     obj = self._store.objects(self._id, pred).next()
                 except StopIteration:
                     raise AttributeError
                 return self._rdf_to_python(pred, obj)
             else:
+                logging.debug('__getattr__:\t\tPredicate %s is multivalued. Returning a ResourceSet.', pred)
                 return ResourceSet(self, pred)
                 
     def __setattr__(self, attr, obj):
@@ -167,15 +175,19 @@ class Thing(object):
             c) str in the form prefix_localname
         obj - a python data representation or a ResourceSet instance
         """
+        logging.debug('__setattr__:\t\tSetting attribute %s to %s', attr, obj)
         if attr[0] == '_':
             self.__dict__[attr] = obj
         else:
             pred = self._AttrToURI(attr)
 
             if self._isUniqueObject(pred):
+                logging.debug('__setattr__:\t\tPredicate %s is unique. Fully overwriting any previous value, if any.', pred)
                 self._store.remove((self._id, pred, None))
-                self._store.add((self._id, pred, self._pythonToRdf(pred, obj)))
+                obj_rdf = self._python_to_rdf(pred, obj)
+                self._store.add((self._id, pred, obj_rdf))
             elif isinstance(obj, ResourceSet) or type(obj) is type(set()):
+                logging.debug('__setattr__:\t\tPredicate %s is multivalued. Creating object as a ResourceSet that may be added to.', pred)
                 ResourceSet(self, pred, obj.copy())
             else:
                 raise TypeError
@@ -196,8 +208,8 @@ class Thing(object):
         """
         Given a RDF predicate and object, return the equivalent Python object.
         
-        pred - rdflib.URIRef.URIRef instance
-        obj - rdflib.Identifier.Identifier instance
+        pred - rdflib.URIRef instance
+        obj - rdflib.Identifier instance
 
         returns a python data representation
         """ 
@@ -211,7 +223,7 @@ class Thing(object):
             while True:
                 counter = URI(RDF_SEQi % i)
                 try:
-                    item = self._store.triples((obj, counter, None)).next()[2]
+                    item = self._store.objects(obj, counter).next()
                 except StopIteration:
                     return l
                 l.append(self._rdf_to_python(counter, item))
@@ -221,7 +233,7 @@ class Thing(object):
         else:
             raise ValueError
 
-    def _pythonToRdf(self, pred, obj, lang=None):
+    def _python_to_rdf(self, pred, obj, lang=None):
         """
         Given a Python predicate and object, return the equivalent RDF object.
         
@@ -230,27 +242,35 @@ class Thing(object):
             
         returns rdflib.Identifier.Identifier instance
         """
+        logging.debug('_python_to_rdf:\tAttempting to convert Python object %s (type %s) to RDF (predicate %s).', obj, type(obj), pred)
+
         obj_types = self._getObjectTypes(pred, obj)
+        logging.debug('_python_to_rdf:\tInferred objects of predicate %s should be types: %s', pred, obj_types)
         if RDF.List in obj_types:
+            logging.debug('_python_to_rdf:\tPredicate %s takes an RDF List; constructing list now.', pred)
             blank = BNode()
             self._pythonToList(blank, obj)   ### this actually stores things... 
             return blank
         elif RDF.Seq in obj_types:  ### so will this
+            logging.debug('_python_to_rdf:\tPredicate %s takes an RDF Sequence; constructing list now.', pred)
             blank = BNode()
             i = 1
             for item in obj:
                 counter = URI(RDF_SEQi % i)
-                self._store.add((blank, counter, self._pythonToRdf(counter, item)))
+                self._store.add((blank, counter, self._python_to_rdf(counter, item)))
                 i += 1
             return blank
         elif isinstance(obj, self.__class__):
+            logging.debug('_python_to_rdf:\tObject seems to be another Thing. Returning %s (type %s)',
+                          obj._id, type(obj._id))
             if obj._store is not self._store:
                 obj.copyTo(self._store)  ### and this...
             return obj._id
         else:
-            return self._pythonToLiteral(obj, obj_types, lang=lang)
+            logging.debug('_python_to_rdf:\tLeaving RDFlib to determine type of %s (type %s)', obj, type(obj))
+            return self._python_to_literal(obj, obj_types, lang=lang)
 
-    def _pythonToLiteral(self, obj, obj_types, lang=None):
+    def _python_to_literal(self, obj, obj_types, lang=None):
         """
         obj - a python literal datatype
         obj_types - iterator yielding rdflib.URIRef instances
@@ -270,11 +290,11 @@ class Thing(object):
         returns list of python data representations
         """
         try:
-            first = self._store.triples((subj, RDF.first, None)).next()[2]
+            first = self._store.objects(subj, RDF.first).next()
         except StopIteration:
             return []
         try:
-            rest = self._store.triples((subj, RDF.rest, None)).next()[2]
+            rest = self._store.objects(subj, RDF.rest).next()
         except StopIteration:
             return ValueError
         return [self._rdf_to_python(RDF.first, first)] + self._listToPython(rest)  ### type first?
@@ -286,7 +306,7 @@ class Thing(object):
         subj - rdflib.Identifier.Identifier instance
         members - list of python data representations
         """
-        first = self._pythonToRdf(RDF.first, members[0])
+        first = self._python_to_rdf(RDF.first, members[0])
         self._store.add((subj, RDF.first, first))
         if len(members) > 1:
             blank = BNode()
@@ -303,50 +323,42 @@ class Thing(object):
         
         returns rdflib.URIRef.URIRef instance
         """
+        logging.debug('_AttrToURI:\t\tTrying to convert %s to a URI.', attr)
         if isinstance(attr, ID):
+            logging.debug('_AttrToURI:\t\tAttr % is already a URI.', attr)
             return attr
 
         if attr is None:
+            logging.debug('_AttrToURI:\t\tAttr %s not set, so using blank node.', attr)
             return BNode()
 
         if ':' in attr:
+            logging.debug('_AttrToURI:\t\tAttr %s contains a colon, so trying as a URI..', attr)
             return URI(attr)
 
         if attr in self._alias_map:
+            logging.debug('_AttrToURI:\t\tAttr %s in alias map, so using URI from there.', attr)
             return URI(self._alias_map[attr])
         else:
             prefix, localname = attr.split("_", 1)
+            logging.debug('_AttrToURI:\t\tAttr %s split into %s and %s.', attr, prefix, localname)
             return URI("".join([self._store.namespace_manager.store.namespace(prefix), localname]))
 
-    def _URIToAttr(self, uri):
-        """
-        Given a URI, return an attribute.
-        
-        uri - str that is a URI
-        
-        returns str in the form prefix_localname. Not the most efficient thing around.
-        """
-        for alias, alias_uri in self._alias_map.items():
-            if uri == alias_uri:
-                return alias
-        for ns_prefix, ns_uri in self._store.namespace_manager.namespaces():
-            if ns_uri == uri[:len(ns_uri)]:
-                return "_".join([ns_prefix, uri[len(ns_uri):]])
-        raise ValueError
 
     def _getObjectTypes(self, pred, obj):
         """
         Given a predicate and an object, return a list of the object's types.
         
-        pred - rdflib.URIRef.URIRef instance
-        obj - rdflib.Identifier.Identifier instance
+        pred - rdflib.URIRef instance
+        obj - rdflib.Identifier instance
         
-        returns list containing rdflib.Identifier.Identifier instances
+        returns list containing rdflib.Identifier instances
         """
-        obj_types = [o for (s, p, o) in self._schema_store.triples((pred, RDFS.range, None))]
+        obj_types = list(self._schema_store.objects(pred, RDFS.range))
 
         if isinstance(obj, URI):
-            obj_types += [o for (s, p, o) in self._store.triples((obj, RDF.type, None))]
+            obj_types += list(self._store.objects(obj, RDF.type))
+
         return obj_types
 
     def _isUniqueObject(self, pred):
@@ -381,10 +393,7 @@ class Thing(object):
         return self._id
         
     def __str__(self):
-        try:
-            return self._URIToAttr(self._id)
-        except ValueError:
-            return str(self._id)
+        return str(self._id)
                 
     def __eq__(self, other):
         if isinstance(other, self.__class__):
@@ -393,17 +402,19 @@ class Thing(object):
             return self._id == other
     
     def __ne__(self, other):
-        if self is other: return False
-        else: return True
-        
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return hash(self._id)
+
     def properties(self):
         """
         List unique properties.
         
         returns list containing self.__class__ instances
         """
-        return [self.__class__(self._store, self._schema_store, self._alias_map, p) 
-          for (s,p,o) in self._store.triples((self._id, None, None))]
+        return [self.__class__(self._store, self._schema_store, self._alias_map, p)
+                for (s, p, o) in self._store.triples((self._id, None, None))]
 
     def copyTo(self, store):
         """
@@ -411,7 +422,9 @@ class Thing(object):
         
         store - rdflib.Store.Store
         """
+        print self._id, list(self._store.triples((None, None, None)))
         for (s, p, o) in self._store.triples((self._id, None, None)):
+            logging.debug('Copying %s, %s, %s', s, p, o)
             store.add((s, p, o))
             if isinstance(o, (URI, BNode)):
                 self.__class__(self._store, self._schema_store, self._alias_map, o).copyTo(store)
@@ -428,41 +441,54 @@ class ResourceSet:
         predicate -  rdflib.URIRef.URIRef instance
         iterable - 
         """
+        logging.debug('__init__:\t\tCreating ResourceSet for %s, %s', subject, predicate)
         self._subject = subject
         self._predicate = predicate
         self._store = subject._store
         if iterable is not None:
             for obj in iterable:
+                logging.debug('__init__:\t\tAdding %s (type %s) to ResourceSet', obj, type(obj))
                 self.add(obj)
+
     def __len__(self):
-        return len(list(
-          self._store.triples((self._subject._id, self._predicate, None))))
+        return len(list(self._store.objects(self._subject._id, self._predicate)))
+
     def __contains__(self, obj):
         if isinstance(obj, self._subject.__class__):    
             obj = obj._id
         else: ### doesn't use pythonToRdf because that might store it
             obj_types = self._subject._getObjectTypes(self._predicate, obj) 
-            obj = self._subject._pythonToLiteral(obj, obj_types)
+            obj = self._subject._python_to_literal(obj, obj_types)
         return (self._subject._id, self._predicate, obj) in self._store
+
     def __iter__(self):
-        for (s, p, o) in \
-          self._store.triples((self._subject._id, self._predicate, None)):
-            yield self._subject._pythonToRdf(self._predicate, o, lang=o.language)
+        for o in self._store.objects(self._subject._id, self._predicate):
+            logging.debug('__iter__:\t\tFound object %s (type %s) in ResourceSet', o, type(o))
+            if isinstance(o, Literal):
+                yield self._subject._rdf_to_python(self._predicate, o)
+            else:
+                yield self._subject._rdf_to_python(self._predicate, o)
+
     def copy(self):
         return set(self)
+
     def add(self, obj):
-        self._store.add((self._subject._id, self._predicate, 
-          self._subject._pythonToRdf(self._predicate, obj)))
+        logging.debug('add:\t\t\tAdding %s (type %s) to ResourceSet for predicate %s.', obj, type(obj), self._predicate)
+        self._store.add((self._subject._id, self._predicate,
+          self._subject._python_to_rdf(self._predicate, obj)))
+
     def remove(self, obj):
         if not obj in self:
             raise KeyError
         self.discard(obj)
+
     def discard(self, obj):
         if isinstance(obj, self._subject.__class__):
             obj = obj._id
         else: ### doesn't use pythonToRdf because that might store it
             obj_types = self._subject._getObjectTypes(self._predicate, obj)
-            obj = self._subject._pythonToLiteral(obj, obj_types)
+            obj = self._subject._python_to_literal(obj, obj_types)
         self._store.remove((self._subject._id, self._predicate, obj))
+
     def clear(self):
         self._store.remove((self._subject, self._predicate, None))
