@@ -489,6 +489,3 @@ class ResourceSet:
             obj_types = self._subject._getObjectTypes(self._predicate, obj)
             obj = self._subject._python_to_literal(obj, obj_types)
         self._store.remove((self._subject._id, self._predicate, obj))
-
-    def clear(self):
-        self._store.remove((self._subject, self._predicate, None))

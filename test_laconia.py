@@ -237,3 +237,56 @@ def test_list_all_properties(factory):
     ross.rf_likes.add('Cheese')
 
     assert set(ross.properties()) == {factory('rdfs_label'), factory('rf_likes')}
+
+
+def test_resource_set_copied_to_set(factory):
+    ross = factory('rf_me')
+    # Test both literals and objects just to exercise it a bit more
+    ross.rf_likes.add('Beer')
+    ross.rf_likes.add(factory('rf_Cheese'))
+
+    # set() constructor should iterate using __iter__ to build up a set
+    assert set(ross.rf_likes) == {factory('rf_Cheese'), 'Beer'}
+
+
+def test_assigning_resourceset_to_another_thing(factory):
+    ross = factory('rf_me')
+    ross.rf_likes.add('Beer')
+    ross.rf_likes.add('Cheese')
+
+    bill = factory('rf_Bill')
+    # Bill likes all the things Ross likes
+    bill.rf_likes = ross.rf_likes
+
+    assert set(bill.rf_likes) == {'Beer', 'Cheese'}
+
+def test_removing_literal(factory):
+    ross = factory('rf_me')
+    ross.rf_likes.add('Beer')
+    ross.rf_likes.add('Cheese')
+
+    assert set(ross.rf_likes) == {'Beer', 'Cheese'}
+
+    ross.rf_likes.remove('Cheese')
+
+    assert set(ross.rf_likes) == {'Beer'}
+
+
+def test_removing_object(factory):
+    ross = factory('rf_me')
+    ross.rf_likes.add(factory('rf_Beer'))
+    ross.rf_likes.add(factory('rf_Cheese'))
+
+    assert set(ross.rf_likes) == {factory('rf_Beer'), factory('rf_Cheese')}
+
+    ross.rf_likes.remove(factory('rf_Cheese'))
+
+    assert set(ross.rf_likes) == {factory('rf_Beer')}
+
+
+def test_keyerror_when_removing_nonexistant_object(factory):
+    ross = factory('rf_me')
+
+    with pytest.raises(KeyError):
+        ross.rf_likes.remove('Coconut')
+
