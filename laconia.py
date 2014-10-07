@@ -41,7 +41,7 @@ SOFTWARE.
 
 __version__ = "0.1.0"
 
-from rdflib.term import Identifier as ID, Node
+from rdflib.term import Identifier as ID
 from rdflib import URIRef as URI
 from rdflib import BNode, Literal, RDF, RDFS
 
@@ -391,7 +391,7 @@ class Thing(object):
         returns list containing self.__class__ instances
         """
         return [self.__class__(self._store, self._schema_store, self._alias_map, p)
-                for (s, p, o) in self._store.triples((self._id, None, None))]
+                for (_, p, _) in self._store.triples((self._id, None, None))]
 
     def copyTo(self, store):
         """
@@ -405,7 +405,7 @@ class Thing(object):
                 self.__class__(self._store, self._schema_store, self._alias_map, o).copyTo(store)
         
         
-class ResourceSet:
+class ResourceSet(object):
     """
     A set interface to the object(s) of a non-unique RDF predicate. Interface is a subset
     (har, har) of set().copy() returns a set.

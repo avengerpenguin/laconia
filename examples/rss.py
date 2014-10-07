@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-from rdflib.Graph import Graph
-from rdflib.URIRef import URIRef as URI
+from rdflib import Graph
+from rdflib import URIRef as URI
 from laconia import ThingFactory
 import textwrap
 indent = textwrap.TextWrapper(initial_indent="  ", subsequent_indent="  ").fill
