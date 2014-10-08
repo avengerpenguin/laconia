@@ -290,3 +290,21 @@ def test_keyerror_when_removing_nonexistant_object(factory):
     with pytest.raises(KeyError):
         ross.rf_likes.remove('Coconut')
 
+
+def test_inverse_properties(factory):
+    john = factory('rf_John')
+    janet = factory('rf_Janet')
+
+    john.rf_likes.add(janet)
+    assert john in janet.rf_likes_of
+    assert john in janet.rf_likes_of.copy()
+    assert len(janet.rf_likes_of) == 1
+
+    janet.rf_likes_of.remove(john)
+    assert john not in janet.rf_likes_of
+    assert len(janet.rf_likes_of) == 0
+
+    janet.rf_likes_of.add('Peter')
+    assert 'Peter' in janet.rf_likes_of
+    assert len(janet.rf_likes_of) == 1
+

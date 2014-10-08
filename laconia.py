@@ -145,6 +145,9 @@ class Thing(object):
         """
         if attr[0] == '_':
             raise AttributeError
+        elif attr.endswith('_of'):
+            pred = self._AttrToURI(attr[:-3])
+            return ResourceSet(self, pred, inverse=True)
         else:
             pred = self._AttrToURI(attr)
 
@@ -191,7 +194,7 @@ class Thing(object):
         else:
             self._store.remove((self._id, self._AttrToURI(attr), None))
 
-    def _rdf_to_python(self, pred, obj):
+    def _rdf_to_python(self, pred, obj, inverse=False):
         """
         Given a RDF predicate and object, return the equivalent Python object.
         
@@ -200,7 +203,7 @@ class Thing(object):
 
         returns a python data representation
         """ 
-        obj_types = self._getObjectTypes(pred, obj)
+        obj_types = self._getObjectTypes(pred, obj, inverse=inverse)
         if isinstance(obj, Literal):  # typed literals
             return obj.toPython()
         elif RDF.List in obj_types:
@@ -322,7 +325,7 @@ class Thing(object):
             return URI("".join([self._store.namespace_manager.store.namespace(prefix), localname]))
 
 
-    def _getObjectTypes(self, pred, obj):
+    def _getObjectTypes(self, pred, obj, inverse=False):
         """
         Given a predicate and an object, return a list of the object's types.
         
@@ -331,7 +334,10 @@ class Thing(object):
         
         returns list containing rdflib.Identifier instances
         """
-        obj_types = list(self._schema_store.objects(pred, RDFS.range))
+        if inverse:
+            obj_types = list(self._schema_store.objects(pred, RDFS.domain))
+        else:
+            obj_types = list(self._schema_store.objects(pred, RDFS.range))
 
         if isinstance(obj, URI):
             obj_types += list(self._store.objects(obj, RDF.type))
@@ -408,9 +414,9 @@ class Thing(object):
 class ResourceSet(object):
     """
     A set interface to the object(s) of a non-unique RDF predicate. Interface is a subset
-    (har, har) of set().copy() returns a set.
+    (har, har) of set(). copy() returns a set.
     """
-    def __init__(self, subject, predicate, iterable=None):
+    def __init__(self, subject, predicate, iterable=None, inverse=False):
         """
         subject - rdflib.Identifier.Identifier instance
         predicate -  rdflib.URIRef.URIRef instance
@@ -419,34 +425,52 @@ class ResourceSet(object):
         self._subject = subject
         self._predicate = predicate
         self._store = subject._store
+        self._inverse = inverse
         if iterable is not None:
             for obj in iterable:
                 self.add(obj)
 
     def __len__(self):
-        return len(list(self._store.objects(self._subject._id, self._predicate)))
+        if self._inverse:
+            return len(list(self._store.subjects(self._predicate, self._subject._id)))
+        else:
+            return len(list(self._store.objects(self._subject._id, self._predicate)))
 
-    def __contains__(self, obj):
-        if isinstance(obj, self._subject.__class__):    
+    def _obj_to_rdf(self, obj):
+        if isinstance(obj, type(self._subject)):
             obj = obj._id
+        elif self._inverse:
+            return self._subject._python_to_literal(obj, [])
         else: ### doesn't use pythonToRdf because that might store it
             obj_types = self._subject._getObjectTypes(self._predicate, obj) 
             obj = self._subject._python_to_literal(obj, obj_types)
-        return (self._subject._id, self._predicate, obj) in self._store
+        return obj
+        
+
+    def __contains__(self, obj):
+        obj = self._obj_to_rdf(obj)
+        if self._inverse:
+            return (obj, self._predicate, self._subject._id) in self._store
+        else:
+            return (self._subject._id, self._predicate, obj) in self._store
 
     def __iter__(self):
-        for o in self._store.objects(self._subject._id, self._predicate):
-            if isinstance(o, Literal):
-                yield self._subject._rdf_to_python(self._predicate, o)
-            else:
+        if self._inverse:
+            for s in self._store.subjects(self._predicate, self._subject._id):
+                yield self._subject._rdf_to_python(self._predicate, s, inverse=True)
+        else:
+            for o in self._store.objects(self._subject._id, self._predicate):
                 yield self._subject._rdf_to_python(self._predicate, o)
 
     def copy(self):
         return set(self)
 
     def add(self, obj):
-        self._store.add((self._subject._id, self._predicate,
-          self._subject._python_to_rdf(self._predicate, obj)))
+        rdf_obj = self._subject._python_to_rdf(self._predicate, obj)
+        if self._inverse:
+            self._store.add((rdf_obj, self._predicate, self._subject._id))
+        else:
+            self._store.add((self._subject._id, self._predicate, rdf_obj))
 
     def remove(self, obj):
         if not obj in self:
@@ -454,9 +478,8 @@ class ResourceSet(object):
         self.discard(obj)
 
     def discard(self, obj):
-        if isinstance(obj, self._subject.__class__):
-            obj = obj._id
-        else: ### doesn't use pythonToRdf because that might store it
-            obj_types = self._subject._getObjectTypes(self._predicate, obj)
-            obj = self._subject._python_to_literal(obj, obj_types)
-        self._store.remove((self._subject._id, self._predicate, obj))
+        obj = self._obj_to_rdf(obj)
+        if self._inverse:
+            self._store.remove((obj, self._predicate, self._subject._id))
+        else:
+            self._store.remove((self._subject._id, self._predicate, obj))
