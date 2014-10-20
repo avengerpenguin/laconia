@@ -297,7 +297,6 @@ def test_inverse_properties(factory):
 
     john.rf_likes.add(janet)
     assert john in janet.rf_likes_of
-    assert john in janet.rf_likes_of.copy()
     assert len(janet.rf_likes_of) == 1
 
     janet.rf_likes_of.remove(john)
@@ -308,3 +307,21 @@ def test_inverse_properties(factory):
     assert 'Peter' in janet.rf_likes_of
     assert len(janet.rf_likes_of) == 1
 
+
+def test_filtering_for_one_language(factory):
+    dog = factory('rf_dog')
+
+    dog.rdfs_label.add('Dog', lang='en')
+    dog.rdfs_label.add('Chien', lang='fr')
+    dog.rdfs_label.add('Pooch')
+
+    assert set(dog.rdfs_label) == {'Dog', 'Chien', 'Pooch'}
+
+    dog.lang = 'en'
+    assert set(dog.rdfs_label) == {'Dog', 'Pooch'}
+
+    dog.lang = 'fr'
+    assert set(dog.rdfs_label) == {'Chien', 'Pooch'}
+
+    dog.lang = None
+    assert set(dog.rdfs_label) == {'Dog', 'Chien', 'Pooch'}

@@ -126,6 +126,8 @@ class Thing(object):
 
         self._id = self._AttrToURI(ident)
 
+        self._lang = None
+
         if props is not None:
             for attr, obj in props.items():
                 if isinstance(obj, list):
@@ -143,11 +145,13 @@ class Thing(object):
 
         returns a python data representation or a ResourceSet instance
         """
-        if attr[0] == '_':
+        if attr == 'lang':
+            return self._lang
+        elif attr[0] == '_':
             raise AttributeError
         elif attr.endswith('_of'):
             pred = self._AttrToURI(attr[:-3])
-            return ResourceSet(self, pred, inverse=True)
+            return ResourceSet(self, pred, inverse=True, lang=self._lang)
         else:
             pred = self._AttrToURI(attr)
 
@@ -158,7 +162,8 @@ class Thing(object):
                     raise AttributeError
                 return self._rdf_to_python(pred, obj)
             else:
-                return ResourceSet(self, pred)
+                print 'My Language: ' + str(self._lang)
+                return ResourceSet(self, pred, lang=self._lang)
                 
     def __setattr__(self, attr, obj):
         """
@@ -168,7 +173,9 @@ class Thing(object):
             c) str in the form prefix_localname
         obj - a python data representation or a ResourceSet instance
         """
-        if attr[0] == '_':
+        if attr == 'lang':
+            self._lang = obj
+        elif attr[0] == '_':
             self.__dict__[attr] = obj
         else:
             pred = self._AttrToURI(attr)
@@ -178,7 +185,7 @@ class Thing(object):
                 obj_rdf = self._python_to_rdf(pred, obj)
                 self._store.add((self._id, pred, obj_rdf))
             elif isinstance(obj, ResourceSet) or type(obj) is type(set()):
-                ResourceSet(self, pred, obj.copy())
+                ResourceSet(self, pred, iterable=obj.copy(), lang=self._lang)
             else:
                 raise TypeError
 
@@ -416,7 +423,7 @@ class ResourceSet(object):
     A set interface to the object(s) of a non-unique RDF predicate. Interface is a subset
     (har, har) of set(). copy() returns a set.
     """
-    def __init__(self, subject, predicate, iterable=None, inverse=False):
+    def __init__(self, subject, predicate, iterable=None, inverse=False, lang=None):
         """
         subject - rdflib.Identifier.Identifier instance
         predicate -  rdflib.URIRef.URIRef instance
@@ -426,6 +433,7 @@ class ResourceSet(object):
         self._predicate = predicate
         self._store = subject._store
         self._inverse = inverse
+        self._lang = lang
         if iterable is not None:
             for obj in iterable:
                 self.add(obj)
@@ -440,7 +448,7 @@ class ResourceSet(object):
         if isinstance(obj, type(self._subject)):
             obj = obj._id
         elif self._inverse:
-            return self._subject._python_to_literal(obj, [])
+            return self._subject._python_to_literal(obj, [], lang=self._lang)
         else: ### doesn't use pythonToRdf because that might store it
             obj_types = self._subject._getObjectTypes(self._predicate, obj) 
             obj = self._subject._python_to_literal(obj, obj_types)
@@ -455,18 +463,24 @@ class ResourceSet(object):
             return (self._subject._id, self._predicate, obj) in self._store
 
     def __iter__(self):
+        print 'Language = ' + str(self._lang)
         if self._inverse:
             for s in self._store.subjects(self._predicate, self._subject._id):
-                yield self._subject._rdf_to_python(self._predicate, s, inverse=True)
+                if self._matches_lang(s):
+                    yield self._subject._rdf_to_python(self._predicate, s, inverse=True)
         else:
             for o in self._store.objects(self._subject._id, self._predicate):
-                yield self._subject._rdf_to_python(self._predicate, o)
+                if self._matches_lang(o):
+                    yield self._subject._rdf_to_python(self._predicate, o)
+
+    def _matches_lang(self, o):
+        return not self._lang or not isinstance(o, Literal) or o.language == self._lang or not o.language
 
     def copy(self):
         return set(self)
 
-    def add(self, obj):
-        rdf_obj = self._subject._python_to_rdf(self._predicate, obj)
+    def add(self, obj, lang=None):
+        rdf_obj = self._subject._python_to_rdf(self._predicate, obj, lang=lang)
         if self._inverse:
             self._store.add((rdf_obj, self._predicate, self._subject._id))
         else:
