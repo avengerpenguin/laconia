@@ -162,7 +162,6 @@ class Thing(object):
                     raise AttributeError
                 return self._rdf_to_python(pred, obj)
             else:
-                print 'My Language: ' + str(self._lang)
                 return ResourceSet(self, pred, lang=self._lang)
                 
     def __setattr__(self, attr, obj):
@@ -463,7 +462,6 @@ class ResourceSet(object):
             return (self._subject._id, self._predicate, obj) in self._store
 
     def __iter__(self):
-        print 'Language = ' + str(self._lang)
         if self._inverse:
             for s in self._store.subjects(self._predicate, self._subject._id):
                 if self._matches_lang(s):
