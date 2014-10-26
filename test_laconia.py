@@ -325,3 +325,13 @@ def test_filtering_for_one_language(factory):
 
     dog.lang = None
     assert set(dog.rdfs_label) == {'Dog', 'Chien', 'Pooch'}
+
+
+def test_non_ascii(store):
+    store.bind("schema", "http://schema.org/")
+    store.parse('les-mis.ttl', format='turtle')
+
+    factory = ThingFactory(store)
+    film = factory('http://dbpedia.org/resource/Les_Mis%C3%A9rables_(1935_film)')
+    film.lang = 'en'
+    assert set(film.schema_name) == {u'Les Misérables (1935 film)'}

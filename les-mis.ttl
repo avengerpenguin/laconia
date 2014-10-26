@@ -1,0 +1,23 @@
+@prefix dbpedia: <http://dbpedia.org/resource/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <http://schema.org/> .
+@prefix xml: <http://www.w3.org/XML/1998/namespace> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<http://dbpedia.org/resource/Les_Mis%C3%A9rables_(1935_film)> schema:actor dbpedia:Cedric_Hardwicke,
+        dbpedia:Charles_Laughton,
+        dbpedia:Fredric_March,
+        dbpedia:Rochelle_Hudson ;
+    schema:description "البؤساء (بالإنجليزية: Les Misérables) هو فيلم دراما تم إنتاجه في الولايات المتحدة وصدر في سنة 1935."@ar,
+        "Die Elenden ist ein US-amerikanischer Historienfilm von Richard Boleslawski aus dem Jahr 1935 nach dem Roman Die Elenden von Victor Hugo, den dieser 1862 fertigstellte."@de,
+        "Les Misérables is a 1935 American drama film starring Fredric March and Charles Laughton based upon the famous Victor Hugo novel of the same name. The movie was adapted by W. P. Lipscomb and directed by Richard Boleslawski. This was the last film for 20th Century Pictures before it merged with Fox Film Corporation to form 20th Century Fox."@en,
+        "Les Misérables est un film américain réalisé par Richard Boleslawski, sorti en 1935."@fr,
+        "Il sergente di ferro (Les Miserables) è un film del 1935 diretto da Richard Boleslawski, tratto dal romanzo I miserabili di Victor Hugo."@it,
+        "Os Miseráveis (título original Les Misérables) é um filme estadunidense de 1935, segunda adaptação para o cinema da obra de Victor Hugo."@pt ;
+    schema:name "البؤساء (فيلم 1935)"@ar,
+        "Die Elenden (1935)"@de,
+        "Les Misérables (1935 film)"@en,
+        "Les Misérables (film, 1935)"@fr,
+        "Il sergente di ferro"@it,
+        "Os Miseráveis (1935)"@pt .
