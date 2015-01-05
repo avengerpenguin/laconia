@@ -3,11 +3,11 @@
 from distutils.core import setup
 
 setup(name='laconia',
-		version = '0.2.1',
+		version = '0.2.6',
 		py_modules = ['laconia'],
 		author = 'Ross Fenning',
 		author_email = 'ross.fenning@gmail.com',
-		url = 'http://gitub.com/avengerpenguin/laconia',
+		url = 'http://github.com/avengerpenguin/laconia',
 		description = 'Simple API for RDF',
 		long_description = """Laconia is a Python API for RDF that is designed
 to help easily learn and navigate the Semantic Web programmatically. 

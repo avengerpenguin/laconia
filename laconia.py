@@ -495,3 +495,10 @@ class ResourceSet(object):
             self._store.remove((obj, self._predicate, self._subject._id))
         else:
             self._store.remove((self._subject._id, self._predicate, obj))
+
+    def any(self):
+        if len(self) > 0:
+            return list(self.copy())[0]
+        else:
+            return None
+
