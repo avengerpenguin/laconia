@@ -157,7 +157,7 @@ class Thing(object):
 
             if self._isUniqueObject(pred):
                 try:
-                    obj = self._store.objects(self._id, pred).next()
+                    obj = next(self._store.objects(self._id, pred))
                 except StopIteration:
                     raise AttributeError
                 return self._rdf_to_python(pred, obj)
@@ -219,7 +219,7 @@ class Thing(object):
             while True:
                 counter = URI(RDF_SEQi % i)
                 try:
-                    item = self._store.objects(obj, counter).next()
+                    item = next(self._store.objects(obj, counter))
                 except StopIteration:
                     return l
                 l.append(self._rdf_to_python(counter, item))
@@ -282,11 +282,11 @@ class Thing(object):
         returns list of python data representations
         """
         try:
-            first = self._store.objects(subj, RDF.first).next()
+            first = next(self._store.objects(subj, RDF.first))
         except StopIteration:
             return []
         try:
-            rest = self._store.objects(subj, RDF.rest).next()
+            rest = next(self._store.objects(subj, RDF.rest))
         except StopIteration:
             return ValueError
         return [self._rdf_to_python(RDF.first, first)] + self._listToPython(rest)  ### type first?
