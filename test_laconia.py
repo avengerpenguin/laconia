@@ -312,19 +312,20 @@ def test_filtering_for_one_language(factory):
     dog = factory('rf_dog')
 
     dog.rdfs_label.add('Dog', lang='en')
+    dog.rdfs_label.add('Mutt', lang='en-gb')
     dog.rdfs_label.add('Chien', lang='fr')
     dog.rdfs_label.add('Pooch')
 
-    assert set(dog.rdfs_label) == {'Dog', 'Chien', 'Pooch'}
+    assert set(dog.rdfs_label) == {'Dog', 'Chien', 'Pooch', 'Mutt'}
 
     dog.lang = 'en'
-    assert set(dog.rdfs_label) == {'Dog', 'Pooch'}
+    assert set(dog.rdfs_label) == {'Dog', 'Pooch', 'Mutt'}
 
     dog.lang = 'fr'
     assert set(dog.rdfs_label) == {'Chien', 'Pooch'}
 
     dog.lang = None
-    assert set(dog.rdfs_label) == {'Dog', 'Chien', 'Pooch'}
+    assert set(dog.rdfs_label) == {'Dog', 'Chien', 'Pooch', 'Mutt'}
 
 
 def test_non_ascii(store):

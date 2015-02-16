@@ -472,7 +472,7 @@ class ResourceSet(object):
                     yield self._subject._rdf_to_python(self._predicate, o)
 
     def _matches_lang(self, o):
-        return not self._lang or not isinstance(o, Literal) or o.language == self._lang or not o.language
+        return not self._lang or not isinstance(o, Literal) or o.language == self._lang or not o.language or o.language.startswith(self._lang)
 
     def copy(self):
         return set(self)
