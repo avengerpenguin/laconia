@@ -328,8 +328,11 @@ class Thing(object):
             return URI(self._alias_map[attr])
         else:
             prefix, localname = attr.split("_", 1)
-            return URI("".join([self._store.namespace_manager.store.namespace(prefix), localname]))
-
+            namespace = self._store.namespace_manager.store.namespace(prefix)
+            if namespace:
+                return URI(namespace + localname)
+            else:
+                raise AttributeError('Unknown prefix: ' + prefix)
 
     def _getObjectTypes(self, pred, obj, inverse=False):
         """
@@ -497,8 +500,7 @@ class ResourceSet(object):
             self._store.remove((self._subject._id, self._predicate, obj))
 
     def any(self):
-        if len(self) > 0:
+        if len(list(self.copy())) > 0:
             return list(self.copy())[0]
         else:
             return None
-

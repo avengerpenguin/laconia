@@ -324,6 +324,10 @@ def test_filtering_for_one_language(factory):
     dog.lang = 'fr'
     assert set(dog.rdfs_label) == {'Chien', 'Pooch'}
 
+    dog.lang = 'de'
+    assert set(dog.rdfs_label) == {'Pooch'}
+    assert dog.rdfs_label.any() == 'Pooch'
+
     dog.lang = None
     assert set(dog.rdfs_label) == {'Dog', 'Chien', 'Pooch', 'Mutt'}
 
@@ -336,3 +340,20 @@ def test_non_ascii(store):
     film = factory('http://dbpedia.org/resource/Les_Mis%C3%A9rables_(1935_film)')
     film.lang = 'en'
     assert set(film.schema_name) == {u'Les Misérables (1935 film)'}
+
+
+def test_hasattr_false_when_unknown_prefix_used(factory):
+    mouse = factory('rf_mouse')
+    assert hasattr(mouse, 'unknown_attr') == False
+
+
+def test_attribute_error_when_unknown_prefix_read(factory):
+    mouse = factory('rf_mouse')
+    with pytest.raises(AttributeError):
+        mouse.unknown_attr
+
+
+def test_attribute_error_when_unknown_prefix_written(factory):
+    mouse = factory('rf_mouse')
+    with pytest.raises(AttributeError):
+        mouse.unknown_attr = 'hello'
