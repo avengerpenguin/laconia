@@ -4,6 +4,9 @@ Laconia
 
 .. image:: https://travis-ci.org/avengerpenguin/laconia.svg?branch=master
     :target: https://travis-ci.org/avengerpenguin/laconia
+.. image:: https://codeclimate.com/github/avengerpenguin/laconia/badges/gpa.svg
+   :target: https://codeclimate.com/github/avengerpenguin/laconia
+   :alt: Code Climate
 
 Forked from Sparta: a Simple API for RDF by Mark Nottingham, <mnot@pobox.com> Original documentation for Sparta follows.
 
